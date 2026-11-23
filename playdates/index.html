@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Come Play!</title>
+  <meta name="description" content="Kid-friendly outings we're going on. Bring your crew and come play!">
+  <meta name="robots" content="noindex, nofollow">
+  <meta property="og:title" content="Come Play!">
+  <meta property="og:description" content="Kid-friendly outings we're going on. Bring your crew!">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cellipse cx='32' cy='26' rx='20' ry='23' fill='%23ff5a5f' stroke='%232b2350' stroke-width='4'/%3E%3Cpath d='M32 49 q-4 8 2 14' stroke='%232b2350' stroke-width='3' fill='none'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Gochi+Hand&family=Nunito:wght@600;800;900&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#playdates">Skip to playdates</a>
+
+  <header class="topbar">
+    <a class="logo" href="#top" aria-label="Come Play! Back to the top">
+      <span>C</span><span>o</span><span>m</span><span>e</span>
+      <span class="gap"></span>
+      <span>P</span><span>l</span><span>a</span><span>y</span><span>!</span>
+    </a>
+    <button class="sound" id="sound" type="button" aria-pressed="true" aria-label="Sounds on">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path class="speaker" d="M5 12h5l7-6v20l-7-6H5z"/><path class="waves" d="M21 11c2 3 2 7 0 10M24 8c4 5 4 11 0 16"/><path class="cross" d="M21 12l8 8M29 12l-8 8"/></svg>
+    </button>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="sky" aria-hidden="true">
+        <div class="sun"><div class="rays"></div><div class="sun-face"><i></i><i></i><b></b></div></div>
+        <div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
+      </div>
+      <div class="balloons" id="balloons" aria-hidden="true"></div>
+      <button class="kite" id="kite" type="button" aria-label="Spin the kite">
+        <svg viewBox="0 0 150 300" aria-hidden="true">
+          <path d="M75 140 C 60 190 100 220 80 300" fill="none" stroke="#2b2350" stroke-width="3"/>
+          <g stroke="#2b2350" stroke-width="3">
+            <path d="M80 170 l-14 -8 v16z" fill="#ffd23f"/><path d="M78 200 l14 -8 v16z" fill="#5ed27a"/><path d="M86 232 l-14 -8 v16z" fill="#a98bff"/>
+          </g>
+          <g stroke="#2b2350" stroke-width="4" stroke-linejoin="round">
+            <path d="M75 0 L135 60 L75 140 L15 60Z" fill="#ff5a5f"/>
+            <path d="M75 0 L75 140 M15 60 L135 60" fill="none"/>
+            <path d="M75 0 L135 60 L75 60Z" fill="#ff9f1c"/><path d="M15 60 L75 140 L75 60Z" fill="#ff8fc7"/>
+          </g>
+        </svg>
+      </button>
+
+      <div class="hero-copy">
+        <p class="eyebrow">Playdates for little explorers</p>
+        <h1 id="hero-title" class="bouncy" aria-label="Let's play together!">
+          <span class="word">Let's</span> <span class="word">play</span> <span class="word">together!</span>
+        </h1>
+        <p class="lede">These are the fun outings on our family calendar. Grab your crew, tap <b>We're in!</b>, and we'll see you there.</p>
+        <div class="hero-buttons">
+          <a class="big-button go" href="#playdates" data-sound="boing"><span>See playdates</span></a>
+          <a class="big-button sub" href="#subscribe" data-sound="boing"><span>Get the calendar</span></a>
+        </div>
+        <p class="scribble" aria-hidden="true">pssst… pop a balloon!</p>
+      </div>
+
+      <div class="hills" aria-hidden="true">
+        <svg viewBox="0 0 1440 220" preserveAspectRatio="none">
+          <path class="hill back" d="M0 120 C 240 40 420 60 620 110 S 1040 180 1440 70 V220 H0Z"/>
+          <path class="hill front" d="M0 170 C 200 110 380 120 560 160 S 980 220 1180 150 S 1360 120 1440 140 V220 H0Z"/>
+        </svg>
+        <button class="critter" id="critter" type="button" aria-label="Say hi to Pip">
+          <span class="critter-body"><span class="eye l"><i></i></span><span class="eye r"><i></i></span><span class="mouth"></span><span class="cheek l"></span><span class="cheek r"></span></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="band events-band" id="playdates" aria-labelledby="playdates-title">
+      <div class="band-inner">
+        <h2 id="playdates-title">Coming up</h2>
+        <p class="band-lede">Tap <b>We're in!</b> so we know you're coming, then pop it in your calendar.</p>
+        <p class="note-arrow" aria-hidden="true">new adventures land here!</p>
+        <div class="cards" id="cards" aria-live="polite">
+          <p class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span> Finding playdates…</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="subscribe" id="subscribe" aria-labelledby="subscribe-title">
+      <div class="sub-card">
+        <div class="mail-buddy" aria-hidden="true"><div class="envelope"><span></span></div></div>
+        <h2 id="subscribe-title">Never miss a playdate</h2>
+        <p>Add our playdate calendar to yours. New outings show up on their own.</p>
+        <div class="sub-buttons" id="sub-buttons">
+          <a class="pill google" id="sub-google" href="#" target="_blank" rel="noopener" data-sound="boing">Google Calendar</a>
+          <a class="pill apple" id="sub-apple" href="#" data-sound="boing">Apple or Outlook</a>
+          <button class="pill copy" id="sub-copy" type="button" data-sound="boing">Copy calendar link</button>
+        </div>
+        <p class="sub-hint" id="sub-hint" hidden>Calendar link coming soon!</p>
+
+        <form class="alerts" id="alerts" novalidate>
+          <label for="alerts-email">Or get an email when we add one</label>
+          <div class="alerts-row">
+            <input id="alerts-email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" required>
+            <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <button class="pill send" type="submit">Email me</button>
+          </div>
+          <p class="form-msg" id="alerts-msg" role="status"></p>
+          <p class="fine">We only use it to tell you about new playdates. Every email has a stop link.</p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <svg class="footer-wave" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 30 Q 60 0 120 30 T 240 30 T 360 30 T 480 30 T 600 30 T 720 30 T 840 30 T 960 30 T 1080 30 T 1200 30 T 1320 30 T 1440 30 V60 H0Z"/></svg>
+    <p>Made with crayons, juice boxes and lots of giggles.</p>
+  </footer>
+
+  <dialog class="join" id="join" aria-labelledby="join-title">
+    <form method="dialog" class="join-form" id="join-form" novalidate>
+      <button class="close" type="button" id="join-close" aria-label="Close">×</button>
+      <div class="join-step" id="join-ask">
+        <p class="join-kicker">Yay, a playdate!</p>
+        <h2 id="join-title">Join <span id="join-event">this playdate</span></h2>
+        <label for="join-nickname">Your family nickname</label>
+        <input id="join-nickname" name="nickname" maxlength="40" placeholder="The Lee Crew" autocomplete="off" required>
+        <p class="fine">Everyone on this page sees it, so a nickname is perfect. No last names needed.</p>
+        <span class="label" id="kids-label">How many kids?</span>
+        <div class="stepper" role="group" aria-labelledby="kids-label">
+          <button type="button" class="step" id="kids-minus" aria-label="One fewer kid">−</button>
+          <output id="kids-count" aria-live="polite">1</output>
+          <button type="button" class="step" id="kids-plus" aria-label="One more kid">+</button>
+        </div>
+        <label for="join-note">A note for us <span class="optional">(only we see this)</span></label>
+        <textarea id="join-note" name="note" maxlength="300" rows="2" placeholder="We'll bring snacks!"></textarea>
+        <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <p class="form-msg" id="join-msg" role="status"></p>
+        <button class="big-button go wide" type="submit" id="join-submit"><span>We're in!</span></button>
+      </div>
+      <div class="join-step" id="join-done" hidden>
+        <div class="party" aria-hidden="true"><span></span><span></span><span></span></div>
+        <h2>See you there!</h2>
+        <p>Pop it in your calendar so you don't forget.</p>
+        <div class="add-cal" id="join-cal"></div>
+      </div>
+    </form>
+  </dialog>
+
+  <canvas id="confetti" aria-hidden="true"></canvas>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
