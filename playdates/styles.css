@@ -360,6 +360,16 @@ textarea { resize: vertical; }
 .party span:nth-child(2) { left: 38px; bottom: 20px; background: var(--sun); animation-delay: .15s; }
 .party span:nth-child(3) { right: 0; background: var(--grass); animation-delay: .3s; }
 
+.date-pick { display: grid; gap: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  min-height: 40px; padding: 0 14px; border-radius: 999px; cursor: pointer; font: 900 14px var(--body);
+  background: var(--white); border: 3px solid var(--ink); box-shadow: 2px 2px 0 var(--ink); transition: transform .2s var(--bounce);
+}
+.chip:hover { transform: translateY(-2px) rotate(-2deg); }
+.chip[aria-pressed="true"] { background: var(--sun); transform: scale(1.06); }
+.date-badge.weekly strong { font-size: 24px; }
+
 /* ---------- Confetti and toast ---------- */
 #confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; }
 .toast {

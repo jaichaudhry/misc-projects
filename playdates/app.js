@@ -175,12 +175,33 @@
   const fmt = (options) => new Intl.DateTimeFormat('en-US', { timeZone: tz, ...options });
   const weekday = fmt({ weekday: 'short' }), monthDay = fmt({ month: 'short', day: 'numeric' }), dayNum = fmt({ day: 'numeric' }),
     month = fmt({ month: 'short' }), longDate = fmt({ weekday: 'long', month: 'long', day: 'numeric' }), clock = fmt({ hour: 'numeric', minute: '2-digit' });
+  const longWeekday = fmt({ weekday: 'long' });
+  function hours(event) {
+    if (event.allDay) return 'all day';
+    const s = clock.format(new Date(event.start)), e = clock.format(new Date(event.end));
+    return `${s.slice(-2) === e.slice(-2) ? s.slice(0, -3) : s}–${e}`;
+  }
   function when(event) {
-    const start = new Date(event.start), end = new Date(event.end);
-    if (event.allDay) return `${longDate.format(start)} · all day`;
-    const s = clock.format(start), e = clock.format(end);
-    const sameHalf = s.slice(-2) === e.slice(-2);
-    return `${longDate.format(start)} · ${sameHalf ? s.slice(0, -3) : s}–${e}`;
+    const start = new Date(event.start);
+    if (event.dates) return `Every ${longWeekday.format(start)} · ${hours(event)} · next ${weekday.format(start)}, ${monthDay.format(start)}`;
+    return `${longDate.format(start)} · ${hours(event)}`;
+  }
+  const shortDate = (event) => `${weekday.format(new Date(event.start))}, ${monthDay.format(new Date(event.start))}`;
+
+  /** Three or more events with the same name, place, weekday and time become one card. */
+  function groupSeries(list) {
+    const groups = new Map();
+    for (const event of list) {
+      const start = new Date(event.start);
+      const key = [event.title, event.location, weekday.format(start), clock.format(start)].join('|');
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(event);
+    }
+    const cards = [];
+    for (const group of groups.values()) {
+      if (group.length >= 3) { group[0].dates = group; cards.push(group[0]); } else cards.push(...group);
+    }
+    return cards.sort((a, b) => new Date(a.start) - new Date(b.start));
   }
 
   // ---------- Card art, picked from the event's words ----------
@@ -329,7 +350,9 @@
       card.style.setProperty('--tint', look.tint === '#2b2350' ? '#a98bff' : look.tint);
       const maps = event.location ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}` : '';
       card.innerHTML = `
-        <div class="date-badge" aria-hidden="true"><small>${esc(weekday.format(start))}</small><strong>${esc(dayNum.format(start))}</strong><small>${esc(month.format(start))}</small></div>
+        ${event.dates
+          ? `<div class="date-badge weekly" aria-hidden="true"><small>every</small><strong>${esc(weekday.format(start))}</strong><small>week</small></div>`
+          : `<div class="date-badge" aria-hidden="true"><small>${esc(weekday.format(start))}</small><strong>${esc(dayNum.format(start))}</strong><small>${esc(month.format(start))}</small></div>`}
         <div class="card-art">${look.svg}</div>
         <div class="card-body">
           <h3>${esc(event.title)}</h3>
@@ -340,7 +363,7 @@
           ${event.description ? `<p class="desc clamped">${esc(event.description)}</p><button class="more" type="button" data-sound="blip">read more</button>` : ''}
           <div class="going"><span class="faces">${facesFor(event.going || [])}</span><span class="going-text">${esc(goingText(event.going || []))}</span></div>
           <div class="card-actions">
-            <button class="big-button go join-btn" type="button"><span>${myJoins[event.id] ? 'Going!' : "We're in!"}</span></button>
+            <button class="big-button go join-btn" type="button"><span>${(event.dates || [event]).some((d) => myJoins[d.id]) ? 'Going!' : "We're in!"}</span></button>
             <div class="cal-menu"><button class="pill cal-btn" type="button" aria-expanded="false">Add to calendar</button></div>
           </div>
         </div>`;
@@ -390,6 +413,21 @@
     current = event;
     sound.play('whoosh');
     $('#join-event').textContent = event.title;
+    // A weekly event: pick which day.
+    const pick = $('#join-dates'), chips = $('#join-chips');
+    pick.hidden = !event.dates;
+    chips.replaceChildren();
+    (event.dates || []).slice(0, 6).forEach((date, i) => {
+      const chip = document.createElement('button');
+      chip.type = 'button'; chip.className = 'chip'; chip.textContent = shortDate(date);
+      chip.setAttribute('aria-pressed', String(i === 0));
+      chip.addEventListener('click', () => {
+        current = date;
+        chips.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', String(c === chip)));
+        sound.play('blip');
+      });
+      chips.appendChild(chip);
+    });
     $('#join-ask').hidden = false; $('#join-done').hidden = true;
     $('#join-msg').textContent = ''; $('#join-msg').className = 'form-msg';
     $('#join-nickname').value = store.get('playdates.nickname', '');
@@ -483,7 +521,7 @@
   });
 
   loadEvents().then((list) => {
-    events = list.sort((a, b) => new Date(a.start) - new Date(b.start));
+    events = groupSeries(list);
     render();
   });
 })();

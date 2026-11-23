@@ -15,6 +15,7 @@
  *   WATCHED_CALENDARS  comma-separated IDs of the calendars to watch (the Family calendar)
  *   ANTHROPIC_API_KEY  the Claude API key
  *   SENSITIVE_WORDS    comma-separated names and places that must never be published
+ *   PLACE_HINTS        optional notes on your shorthand, one per line ("tranmpoline = Sky Zone Mountlake Terrace")
  *   DRY_RUN            "true" (the default) only reports decisions; "false" publishes
  */
 const MODEL = 'claude-sonnet-5-5';
@@ -187,17 +188,37 @@ function leakCheck_(text, sensitive) {
   return null;
 }
 
-function askClaude_(event) {
+/** How to write what other parents see, shared by deciding and by rewriting approved events. */
+function writingRules_() {
+  const hints = property_('PLACE_HINTS', '').trim();
+  return [
+    'Write what other parents will see.',
+    'title: a clear, correctly spelled name for the outing, with the venue when it helps, e.g. "Open Jump at Sky Zone Mountlake Terrace" or "Story Time at Bothell Library". The calendar title is the family\'s own shorthand: fix typos, expand abbreviations, and capitalize properly. No family names or ticket counts.',
+    'description: 1-3 friendly sentences with useful public info (what it is, whether to book tickets, where to meet). Never include names of family members, prices, order or confirmation numbers, phone numbers, emails, or who is coming.',
+    'location: the venue name and city, plus the street address only if you are sure of it. Never a home address.',
+    hints ? 'The family\'s notes on what their shorthand means (trust these):\n' + hints : '',
+  ].filter(String).join('\n\n');
+}
+
+/**
+ * Asks Claude about one event. `approved` means you already chose to publish it: Claude only
+ * writes the public text.
+ */
+function askClaude_(event, approved) {
   const key = property_('ANTHROPIC_API_KEY', '');
   if (!key) throw new Error('ANTHROPIC_API_KEY is not set');
-  const instructions = [
+  const instructions = (approved ? [
+    'The family has approved sharing this event from their private calendar on a public page where other parents can join with their kids.',
+    writingRules_(),
+    'Reply with only a JSON object: {"decision": "publish", "confidence": 1, "reason": "approved", "title": "", "description": "", "location": ""}',
+  ] : [
     'You decide whether an event from a family\'s private calendar should be shared on a public page where other parents can see it and bring their kids along.',
     'publish: an outing or activity at a public venue that other families could join with their kids (a park, museum, show, festival, open play, holiday lights, a library story time). They would buy their own tickets if needed.',
     'private: anything personal: health, work, money, travel, school admin, appointments, lessons or classes booked just for this family, adult-only plans, or anything at a home address.',
     'review: if you are unsure.',
-    'For publish, also write what other parents will see. title: the activity\'s name, no family names or ticket counts. description: 1-3 friendly sentences with useful public info (what it is, whether to book tickets, where to meet). Never include names of family members, prices, order or confirmation numbers, phone numbers, emails, or who is coming. location: the venue name and public address only.',
+    'For publish and review: ' + writingRules_(),
     'Reply with only a JSON object: {"decision": "publish"|"private"|"review", "confidence": 0 to 1, "reason": "short", "title": "", "description": "", "location": ""}',
-  ].join('\n\n');
+  ]).join('\n\n');
   const response = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
     method: 'post',
     contentType: 'application/json',
@@ -219,6 +240,45 @@ function askClaude_(event) {
 }
 
 // MARK: - Publishing and following changes
+
+/** The public text for an event you approved, from Claude; null if it can't be written safely. */
+function writePublic_(original) {
+  try {
+    const text = askClaude_({ title: original.getTitle(), description: stripHtml_(original.getDescription()),
+      location: original.getLocation(), start: original.getStartTime().toString(), end: original.getEndTime().toString(),
+      recurring: original.isRecurringEvent() }, true);
+    if (!text.title || leakCheck_([text.title, text.description, text.location].join('\n'), sensitiveWords_())) return null;
+    return text;
+  } catch (err) {
+    return null;
+  }
+}
+
+/**
+ * Run by hand after changing PLACE_HINTS or the writing rules: rewrites the title, description and
+ * place of everything already published, once per series, and updates the copies.
+ */
+function refreshPublished() {
+  const sync = syncSheet_();
+  const rows = sync.getDataRange().getValues();
+  const playdates = CalendarApp.getCalendarById(CALENDAR_ID);
+  const written = {};
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][1] !== 'published' || !rows[i][2]) continue;
+    const series = seriesKey_(rows[i][0]);
+    if (!(series in written)) {
+      const original = findOriginal_(rows[i][0]);
+      written[series] = original ? writePublic_(original) : null;
+    }
+    const text = written[series], copy = playdates.getEventById(rows[i][2]);
+    if (!text || !copy) continue;
+    copy.setTitle(text.title);
+    copy.setDescription(text.description || '');
+    copy.setLocation(text.location || '');
+    sync.getRange(i + 1, 8).setValue(JSON.stringify(text));
+  }
+  Logger.log(JSON.stringify(written, null, 2));
+}
 
 function publish_(playdates, event, verdict) {
   const options = { description: verdict.description || '', location: verdict.location || '' };
@@ -280,7 +340,9 @@ function decideReview_(action, token) {
     if (action === 'skip') { sync.getRange(i + 1, 2).setValue('private'); continue; }
     const original = findOriginal_(rows[i][0]);
     if (!original) continue;
-    const text = Object.assign({}, verdict, { title: verdict.title || original.getTitle() });
+    // Claude often leaves vague events without public text: write it now, once for the series.
+    if (!verdict.title) Object.assign(verdict, writePublic_(original) || { title: original.getTitle() });
+    const text = Object.assign({}, verdict);
     if (leakCheck_([text.title, text.description, text.location].join('\n'), sensitiveWords_())) {
       text.title = 'Playdate'; text.description = ''; // never leak: publish the time and place only
     }
