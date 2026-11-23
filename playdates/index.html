@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Gochi+Hand&family=Nunito:wght@600;800;900&display=swap">
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
   <a class="skip" href="#playdates">Skip to playdates</a>
@@ -106,7 +106,7 @@
         <form class="alerts" id="alerts" novalidate>
           <label for="alerts-email">Or get an email when we add one</label>
           <div class="alerts-row">
-            <input id="alerts-email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" required>
+            <input id="alerts-email" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="you@example.com" required>
             <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
             <button class="pill send" type="submit">Email me</button>
           </div>
@@ -134,10 +134,10 @@
           <div class="chips" id="join-chips"></div>
         </div>
         <label for="join-nickname">Your family nickname</label>
-        <input id="join-nickname" name="nickname" maxlength="40" placeholder="The Lee Crew" autocomplete="off" required>
+        <input id="join-nickname" name="nickname" maxlength="40" placeholder="The Lee Crew" autocomplete="off" autocapitalize="words" required>
         <p class="fine">Just what we should call you, like "The Lee Crew". No last names needed.</p>
         <label for="join-email">Your email</label>
-        <input id="join-email" name="email" type="email" inputmode="email" maxlength="120" placeholder="you@example.com" autocomplete="email" required>
+        <input id="join-email" name="email" type="email" inputmode="email" maxlength="120" placeholder="you@example.com" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" required>
         <p class="fine">We'll send the calendar invite here. Only we see it.</p>
         <span class="label" id="kids-label">How many kids?</span>
         <div class="stepper" role="group" aria-labelledby="kids-label">
@@ -163,7 +163,7 @@
   <canvas id="confetti" aria-hidden="true"></canvas>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="config.js?v=6"></script>
-  <script src="app.js?v=6"></script>
+  <script src="config.js?v=8"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

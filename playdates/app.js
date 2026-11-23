@@ -59,6 +59,10 @@
       whoosh() { noise(.25, .12); },
     };
     button.addEventListener('click', () => { on = !on; store.set('playdates.sound', on); show(); if (on) sounds.boing(); });
+    // iPhones only allow sound after a finished tap: unlock it on the first one, so the first
+    // balloon pop (which fires on touch down) isn't silent.
+    const unlock = () => { if (on) audio(); ['touchend', 'click', 'keydown'].forEach((t) => removeEventListener(t, unlock, true)); };
+    ['touchend', 'click', 'keydown'].forEach((t) => addEventListener(t, unlock, true));
     return { play(name) { if (on && sounds[name]) try { sounds[name](); } catch { /* audio unavailable */ } } };
   })();
 
@@ -115,7 +119,7 @@
 
   const balloons = $('#balloons');
   function balloon() {
-    if (document.hidden || balloons.children.length >= 6) return;
+    if (document.hidden || balloons.querySelectorAll('.balloon').length >= (innerWidth < 640 ? 3 : 6)) return; // fewer on phones, where they float over the text
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'balloon'; b.tabIndex = -1;
     const color = pick(colors);
@@ -370,9 +374,16 @@
     $('#join-note').value = '';
     setKids(store.get('playdates.kids', 1));
     if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', '');
+    document.documentElement.classList.add('dialog-open');
+    $('#join-form').scrollTop = 0;
     setTimeout(() => $('#join-nickname').focus(), 60);
   }
-  const closeJoin = () => { sound.play('down'); dialog.close ? dialog.close() : dialog.removeAttribute('open'); };
+  const closeJoin = () => {
+    sound.play('down');
+    if (dialog.close) dialog.close(); else dialog.removeAttribute('open');
+    document.documentElement.classList.remove('dialog-open');
+  };
+  dialog.addEventListener('close', () => document.documentElement.classList.remove('dialog-open')); // Escape key
   $('#join-close').addEventListener('click', closeJoin);
   dialog.addEventListener('click', (e) => { if (e.target === dialog) closeJoin(); });
 

@@ -41,10 +41,12 @@ body {
 h1, h2 { font-family: var(--display); font-weight: 400; line-height: 1.05; text-wrap: balance; margin: 0; }
 a { color: inherit; }
 button, input, textarea { font: inherit; color: inherit; }
+button, a, input, textarea, .balloon { touch-action: manipulation; }
 :focus-visible { outline: 4px dashed var(--coral); outline-offset: 4px; }
 .skip { position: absolute; left: -999px; top: 8px; background: var(--white); padding: 8px 16px; border: var(--outline); border-radius: 999px; z-index: 50; }
 .skip:focus { left: 16px; }
 [hidden] { display: none !important; }
+section[id] { scroll-margin-top: 84px; }
 
 /* ---------- Top bar ---------- */
 .topbar {
@@ -327,7 +329,13 @@ input:focus, textarea:focus { outline: none; transform: scale(1.02); box-shadow:
 .join[open] { animation: dialogIn .5s var(--bounce); }
 .join::backdrop { background: rgba(43, 35, 80, .45); backdrop-filter: blur(3px); }
 @keyframes dialogIn { from { transform: scale(.4) rotate(-10deg); opacity: 0; } }
-.join-form { position: relative; padding: 34px 28px 28px; }
+/* The form scrolls inside the dialog on short screens; the page behind stays put. The close button
+   is placed against the dialog (the form is not positioned), so it doesn't scroll away. */
+.join-form {
+  padding: 34px 28px 28px; border-radius: 30px;
+  max-height: calc(100vh - 48px); max-height: calc(100dvh - 48px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+}
+html.dialog-open, html.dialog-open body { overflow: hidden; }
 .join-step { display: grid; gap: 8px; }
 .join-kicker { font: 26px var(--hand); color: var(--coral); margin: 0; transform: rotate(-3deg); }
 .join h2 { font-size: 34px; margin-bottom: 8px; }
@@ -388,11 +396,27 @@ textarea { resize: vertical; }
   .critter .eye { top: 22px; width: 20px; height: 24px; } .critter .eye.l { left: 16px; } .critter .eye.r { right: 16px; }
   .critter .mouth { left: 30px; right: 30px; top: 50px; } .critter .cheek { top: 48px; } .critter .cheek.l { left: 8px; } .critter .cheek.r { right: 8px; }
   .note-arrow { display: none; }
+  .sun { width: 64px; height: 64px; top: 86px; right: 12px; }
+  .rays { inset: -20px; }
+  .sun-face i { top: 20px; width: 7px; height: 9px; } .sun-face i:first-child { left: 17px; } .sun-face i:nth-child(2) { right: 17px; }
+  .sun-face b { left: 19px; right: 19px; top: 33px; height: 11px; border-width: 3px; }
+  .close { top: 10px; right: 10px; width: 46px; height: 46px; }
+  .join-form { padding: 28px 20px 22px; }
+  .join h2 { font-size: 28px; padding-right: 44px; }
   .big-button { font-size: 19px; padding: 0 22px; }
   .logo { padding: 2px 14px 6px; }
 }
 
+/* The smallest phones (iPhone SE): keep the sun clear of the label. */
+@media (max-width: 380px) {
+  .eyebrow { font-size: 11px; padding: 5px 12px; letter-spacing: .06em; }
+  .sun { width: 52px; height: 52px; right: 8px; }
+  .rays { inset: -14px; }
+  .sun-face i { top: 16px; width: 6px; height: 8px; } .sun-face i:first-child { left: 13px; } .sun-face i:nth-child(2) { right: 13px; }
+  .sun-face b { left: 15px; right: 15px; top: 27px; height: 9px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; scroll-behavior: auto !important; }
-  .balloons { display: none; }
+  .balloons, .scribble { display: none; }
 }
