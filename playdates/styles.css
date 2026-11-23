@@ -55,7 +55,7 @@ button, input, textarea { font: inherit; color: inherit; }
 }
 .topbar > * { pointer-events: auto; }
 .logo {
-  display: inline-flex; align-items: baseline;
+  display: inline-flex; align-items: baseline; overflow: visible;
   font-family: var(--display); font-size: clamp(26px, 4vw, 36px); text-decoration: none;
   background: var(--white); border: var(--outline); border-radius: 999px; padding: 4px 18px 8px;
   box-shadow: 4px 4px 0 var(--ink);
@@ -68,6 +68,10 @@ button, input, textarea { font: inherit; color: inherit; }
 .logo span:nth-child(5n+4) { color: var(--grass); animation-delay: .3s; }
 .logo span:nth-child(5n+5) { color: var(--berry); animation-delay: .4s; }
 .logo:hover span { animation-duration: .7s; }
+.logo .capped { position: relative; }
+.nightcap { position: absolute; left: -7px; top: -2px; width: 28px; transform: rotate(-16deg); transform-origin: 30% 90%; animation: capWiggle 3.2s ease-in-out infinite; }
+.logo:hover .nightcap { animation-duration: .8s; }
+@keyframes capWiggle { 0%, 100% { transform: rotate(-16deg); } 50% { transform: rotate(-4deg) translateY(-2px); } }
 @keyframes hop { 0%, 60%, 100% { transform: translateY(0); } 70% { transform: translateY(-7px) rotate(-6deg); } 80% { transform: translateY(0) rotate(3deg); } }
 
 .sound {

@@ -1,4 +1,4 @@
-# Come Play!
+# Come Play with The PJs
 
 A kid-style page where other parents can see our upcoming playdate outings and book one, subscribe to
 the whole calendar, or get an email when we add one. Each outing is for one family: when a family
