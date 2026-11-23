@@ -15,6 +15,9 @@
 
 // The Playdates calendar's ID (Google Calendar › Settings for the calendar › Integrate calendar).
 const CALENDAR_ID = 'd7a58c65618e83092b219fb1e2f456cfaaf95b431ea4eb50a6e5766ff0c6bc56@group.calendar.google.com';
+// This script's web app address (Deploy › Manage deployments). Used for the buttons in emails: when
+// the script runs on a timer, Google reports a different address for itself, which doesn't work.
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxo9Y9KZAnCTZZmw1-3zRwk4m3BmJME2GnLXZfhI1HxE1cJscu0j_dL-XrKkV75xLrF/exec';
 // The website's address, used in emails.
 const SITE_URL = 'https://swiftworksolutions.com/playwithpjs/';
 // How far ahead the website shows events.
@@ -141,7 +144,7 @@ function emailNewPlaydates() {
 }
 
 function emailHtml_(heading, body, token) {
-  const leave = ScriptApp.getService().getUrl() + '?action=unsubscribe&token=' + encodeURIComponent(token);
+  const leave = WEB_APP_URL + '?action=unsubscribe&token=' + encodeURIComponent(token);
   return '<div style="font-family:system-ui,sans-serif;font-size:16px;color:#2b2350">' +
     '<h2 style="color:#ff5a5f">' + heading + '</h2>' + body +
     '<p style="font-size:12px;color:#777;margin-top:32px"><a href="' + leave + '">Stop these emails</a></p></div>';

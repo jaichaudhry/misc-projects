@@ -48,7 +48,7 @@ function syncFamilyCalendar() {
   const known = {}, series = {};
   rows.slice(1).forEach(function (row, i) {
     known[row[0]] = { row: i + 2, decision: row[1], copyId: row[2] };
-    remember_(series, row[0], row[1], row[7]);
+    remember_(series, row[0], row[1], row[7], row[3]);
   });
 
   const now = new Date();
@@ -75,11 +75,11 @@ function syncFamilyCalendar() {
         if (entry.decision === 'published' && entry.copyId) followChanges_(event, playdates.getEventById(entry.copyId));
         return;
       }
-      // A repeating event is judged once: later weeks follow the series' decision.
-      const earlier = series[seriesKey_(key)];
+      // A repeating event, or the same title added on several days, is judged once: the others follow.
+      const earlier = series[seriesKey_(key)] || series[titleKey_(event.getTitle())];
       if (earlier && earlier.decision === 'review') {
         sync.appendRow([key, 'review', '', event.getTitle(), 'Same as earlier weeks: waiting for your review', new Date(), '', '']);
-        remember_(series, key, 'review', '');
+        remember_(series, key, 'review', '', event.getTitle());
         return;
       }
       const verdict = earlier
@@ -88,19 +88,19 @@ function syncFamilyCalendar() {
       if (verdict.decision === 'publish' && dryRun) {
         dryRunNotes.push(verdict);
         sync.appendRow([key, 'would publish', '', event.getTitle(), verdict.reason, new Date(), '', JSON.stringify(verdict)]);
-        remember_(series, key, 'would publish', JSON.stringify(verdict));
+        remember_(series, key, 'would publish', JSON.stringify(verdict), event.getTitle());
       } else if (verdict.decision === 'publish') {
         const copy = publish_(playdates, event, verdict);
         sync.appendRow([key, 'published', copy.getId(), event.getTitle(), verdict.reason, new Date(), '', JSON.stringify(verdict)]);
-        remember_(series, key, 'published', JSON.stringify(verdict));
+        remember_(series, key, 'published', JSON.stringify(verdict), event.getTitle());
       } else if (verdict.decision === 'review') {
         const token = Utilities.getUuid();
         sync.appendRow([key, 'review', '', event.getTitle(), verdict.reason, new Date(), token, JSON.stringify(verdict)]);
-        remember_(series, key, 'review', JSON.stringify(verdict));
+        remember_(series, key, 'review', JSON.stringify(verdict), event.getTitle());
         reviews.push({ event: event, verdict: verdict, token: token });
       } else {
         sync.appendRow([key, 'private', '', event.getTitle(), verdict.reason, new Date(), '', '']);
-        remember_(series, key, 'private', '');
+        remember_(series, key, 'private', '', event.getTitle());
       }
     });
   });
@@ -128,13 +128,21 @@ function seriesKey_(key) {
 }
 
 /** Keeps the strongest decision per series: yours (published, private) over review over would publish. */
-function remember_(series, key, decision, verdict) {
-  const rank = { 'would publish': 1, review: 2, published: 3, private: 3, removed: 0 };
-  const id = seriesKey_(key), current = series[id];
-  if (current && (rank[current.decision] || 0) >= (rank[decision] || 0)) return;
+function remember_(series, key, decision, verdict, title) {
+  const rank = { 'would publish': 1, review: 2, published: 3, private: 3, booked: 3, removed: 0 };
   let parsed = null;
   try { parsed = verdict ? JSON.parse(verdict) : null; } catch (err) { parsed = null; }
-  series[id] = { decision: decision, verdict: parsed };
+  [seriesKey_(key), title ? titleKey_(title) : null].forEach(function (id) {
+    if (!id) return;
+    const current = series[id];
+    if (current && (rank[current.decision] || 0) >= (rank[decision] || 0)) return;
+    series[id] = { decision: decision, verdict: parsed };
+  });
+}
+
+/** The same outing added on several days shares a title. */
+function titleKey_(title) {
+  return 'title:' + String(title || '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
 /** Rules, then Claude, then checks on the public text. Returns {decision, reason, confidence, title, description, location}. */
@@ -297,7 +305,7 @@ function followChanges_(original, copy) {
 // MARK: - Review queue
 
 function emailReviews_(reviews) {
-  const base = ScriptApp.getService().getUrl();
+  const base = WEB_APP_URL;
   const items = reviews.map(function (item) {
     const v = item.verdict, e = item.event;
     const link = function (action) { return base + '?action=' + action + '&token=' + encodeURIComponent(item.token); };
@@ -327,18 +335,34 @@ function emailDryRun_(verdicts) {
   });
 }
 
-/** The Publish and Keep private buttons in review emails. A decision covers every week of a repeating event. */
+/** Run by hand: emails the reviews still waiting for you again, one per outing. */
+function resendReviews() {
+  const rows = syncSheet_().getDataRange().getValues();
+  const pending = {};
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][1] !== 'review' || !rows[i][6]) continue;
+    const id = titleKey_(rows[i][3]);
+    if (pending[id]) continue;
+    const event = findOriginal_(rows[i][0]);
+    if (event) pending[id] = { event: event, verdict: JSON.parse(rows[i][7] || '{}'), token: rows[i][6] };
+  }
+  const reviews = Object.keys(pending).map(function (id) { return pending[id]; });
+  if (reviews.length) emailReviews_(reviews);
+  Logger.log(reviews.length + ' sent');
+}
+
+/** The Publish and Keep private buttons in review emails. A decision covers every date of the same outing. */
 function decideReview_(action, token) {
   const sync = syncSheet_();
   const rows = sync.getDataRange().getValues();
   const hit = rows.findIndex(function (row, i) { return i > 0 && token && row[6] === token && row[1] === 'review'; });
   if (hit < 1) return page_('Already decided, or the link is old.');
   const verdict = JSON.parse(rows[hit][7] || '{}');
-  const series = seriesKey_(rows[hit][0]);
+  const series = seriesKey_(rows[hit][0]), title = titleKey_(rows[hit][3]);
   const playdates = CalendarApp.getCalendarById(CALENDAR_ID);
   let published = 0;
   for (let i = 1; i < rows.length; i++) {
-    if (rows[i][1] !== 'review' || seriesKey_(rows[i][0]) !== series) continue;
+    if (rows[i][1] !== 'review' || (seriesKey_(rows[i][0]) !== series && titleKey_(rows[i][3]) !== title)) continue;
     if (action === 'skip') { sync.getRange(i + 1, 2).setValue('private'); continue; }
     const original = findOriginal_(rows[i][0]);
     if (!original) continue;
