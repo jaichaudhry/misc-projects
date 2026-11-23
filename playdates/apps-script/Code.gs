@@ -16,7 +16,7 @@
 // The Playdates calendar's ID (Google Calendar › Settings for the calendar › Integrate calendar).
 const CALENDAR_ID = 'd7a58c65618e83092b219fb1e2f456cfaaf95b431ea4eb50a6e5766ff0c6bc56@group.calendar.google.com';
 // The website's address, used in emails.
-const SITE_URL = 'https://jaichaudhry.github.io/misc-projects/playdates/';
+const SITE_URL = 'https://swiftworksolutions.com/playwithpjs/';
 // How far ahead the website shows events.
 const DAYS_AHEAD = 120;
 

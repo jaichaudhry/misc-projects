@@ -5,7 +5,10 @@ the whole calendar, or get an email when we add one. Each outing is for one fami
 says yes, it comes off the page and they get a calendar invite; if they decline it, it comes back.
 
 - **Site:** `index.html`, `styles.css`, `app.js`, settings in `config.js`. Plain HTML, CSS and
-  JavaScript, served by GitHub Pages. All sounds are synthesized in the browser.
+  JavaScript, served at https://swiftworksolutions.com/playwithpjs by the SwiftWork Solutions site.
+  To publish a change: `./publish.sh`, then commit and push in `SwiftworkSolutionsWebsite` (Firebase
+  deploys on push to main). The old GitHub Pages address redirects there. All sounds are synthesized
+  in the browser.
 - **Backend:** `apps-script/Code.gs`, `Sync.gs` and `Bookings.gs`, a Google Apps Script web app bound
   to a Google Sheet. It reads the public **Playdates** Google Calendar, books outings, saves email
   sign-ups to the sheet, and emails subscribers every hour when new events appear.
