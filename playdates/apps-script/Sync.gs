@@ -283,6 +283,7 @@ function refreshPublished() {
     if (!(series in written)) {
       const original = findOriginal_(rows[i][0]);
       written[series] = original ? writePublic_(original) : null;
+      if (written[series]) written[series].sourceLocation = (original.getLocation() || '').trim();
     }
     const text = written[series], copy = playdates.getEventById(rows[i][2]);
     if (!text || !copy) continue;
