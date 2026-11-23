@@ -43,8 +43,11 @@ function syncFamilyCalendar() {
   const dryRun = property_('DRY_RUN', 'true') !== 'false';
   const sync = syncSheet_();
   const rows = sync.getDataRange().getValues();
-  const known = {};
-  rows.slice(1).forEach(function (row, i) { known[row[0]] = { row: i + 2, decision: row[1], copyId: row[2] }; });
+  const known = {}, series = {};
+  rows.slice(1).forEach(function (row, i) {
+    known[row[0]] = { row: i + 2, decision: row[1], copyId: row[2] };
+    remember_(series, row[0], row[1], row[7]);
+  });
 
   const now = new Date();
   const until = new Date(now.getTime() + DAYS_AHEAD * 24 * 3600 * 1000);
@@ -69,19 +72,32 @@ function syncFamilyCalendar() {
         if (entry.decision === 'published' && entry.copyId) followChanges_(event, playdates.getEventById(entry.copyId));
         return;
       }
-      const verdict = judge_(event);
+      // A repeating event is judged once: later weeks follow the series' decision.
+      const earlier = series[seriesKey_(key)];
+      if (earlier && earlier.decision === 'review') {
+        sync.appendRow([key, 'review', '', event.getTitle(), 'Same as earlier weeks: waiting for your review', new Date(), '', '']);
+        remember_(series, key, 'review', '');
+        return;
+      }
+      const verdict = earlier
+        ? (earlier.decision === 'private' ? { decision: 'private', reason: 'Same as earlier weeks' } : Object.assign({}, earlier.verdict, { decision: 'publish' }))
+        : judge_(event);
       if (verdict.decision === 'publish' && dryRun) {
         dryRunNotes.push(verdict);
         sync.appendRow([key, 'would publish', '', event.getTitle(), verdict.reason, new Date(), '', JSON.stringify(verdict)]);
+        remember_(series, key, 'would publish', JSON.stringify(verdict));
       } else if (verdict.decision === 'publish') {
         const copy = publish_(playdates, event, verdict);
         sync.appendRow([key, 'published', copy.getId(), event.getTitle(), verdict.reason, new Date(), '', JSON.stringify(verdict)]);
+        remember_(series, key, 'published', JSON.stringify(verdict));
       } else if (verdict.decision === 'review') {
         const token = Utilities.getUuid();
         sync.appendRow([key, 'review', '', event.getTitle(), verdict.reason, new Date(), token, JSON.stringify(verdict)]);
+        remember_(series, key, 'review', JSON.stringify(verdict));
         reviews.push({ event: event, verdict: verdict, token: token });
       } else {
         sync.appendRow([key, 'private', '', event.getTitle(), verdict.reason, new Date(), '', '']);
+        remember_(series, key, 'private', '');
       }
     });
   });
@@ -103,6 +119,21 @@ function syncFamilyCalendar() {
 
 // MARK: - Deciding
 
+/** The key without its start time: the same for every week of a repeating event. */
+function seriesKey_(key) {
+  return String(key).split('_').slice(0, -1).join('_');
+}
+
+/** Keeps the strongest decision per series: yours (published, private) over review over would publish. */
+function remember_(series, key, decision, verdict) {
+  const rank = { 'would publish': 1, review: 2, published: 3, private: 3, removed: 0 };
+  const id = seriesKey_(key), current = series[id];
+  if (current && (rank[current.decision] || 0) >= (rank[decision] || 0)) return;
+  let parsed = null;
+  try { parsed = verdict ? JSON.parse(verdict) : null; } catch (err) { parsed = null; }
+  series[id] = { decision: decision, verdict: parsed };
+}
+
 /** Rules, then Claude, then checks on the public text. Returns {decision, reason, confidence, title, description, location}. */
 function judge_(event) {
   const title = event.getTitle(), description = stripHtml_(event.getDescription()), location = event.getLocation();
@@ -110,11 +141,16 @@ function judge_(event) {
   if (rule) return { decision: 'private', reason: rule };
 
   let verdict;
+  const details = { title: title, description: description, location: location,
+      start: event.getStartTime().toString(), end: event.getEndTime().toString(), recurring: event.isRecurringEvent() };
   try {
-    verdict = askClaude_({ title: title, description: description, location: location,
-      start: event.getStartTime().toString(), end: event.getEndTime().toString(), recurring: event.isRecurringEvent() });
-  } catch (err) {
-    return { decision: 'review', reason: 'Couldn’t ask Claude (' + err.message + ')', title: title, description: '', location: location };
+    verdict = askClaude_(details);
+  } catch (first) {
+    try {
+      verdict = askClaude_(details);
+    } catch (err) {
+      return { decision: 'review', reason: 'Couldn’t ask Claude (' + err.message + ')', title: title, description: '', location: location };
+    }
   }
   if (verdict.decision !== 'publish') return verdict;
   if (!(verdict.confidence >= MIN_CONFIDENCE)) {
@@ -169,7 +205,7 @@ function askClaude_(event) {
     muteHttpExceptions: true,
     payload: JSON.stringify({
       model: MODEL,
-      max_tokens: 600,
+      max_tokens: 1500,
       system: instructions,
       messages: [{ role: 'user', content: 'Event:\n' + JSON.stringify(event, null, 2) }],
     }),
@@ -229,27 +265,33 @@ function emailDryRun_(verdicts) {
   });
 }
 
-/** The Publish and Keep private buttons in review emails. */
+/** The Publish and Keep private buttons in review emails. A decision covers every week of a repeating event. */
 function decideReview_(action, token) {
   const sync = syncSheet_();
   const rows = sync.getDataRange().getValues();
+  const hit = rows.findIndex(function (row, i) { return i > 0 && token && row[6] === token && row[1] === 'review'; });
+  if (hit < 1) return page_('Already decided, or the link is old.');
+  const verdict = JSON.parse(rows[hit][7] || '{}');
+  const series = seriesKey_(rows[hit][0]);
+  const playdates = CalendarApp.getCalendarById(CALENDAR_ID);
+  let published = 0;
   for (let i = 1; i < rows.length; i++) {
-    if (!token || rows[i][6] !== token || rows[i][1] !== 'review') continue;
-    if (action === 'skip') {
-      sync.getRange(i + 1, 2).setValue('private');
-      return page_('Kept private. It won’t go on the page.');
-    }
-    const verdict = JSON.parse(rows[i][7] || '{}');
+    if (rows[i][1] !== 'review' || seriesKey_(rows[i][0]) !== series) continue;
+    if (action === 'skip') { sync.getRange(i + 1, 2).setValue('private'); continue; }
     const original = findOriginal_(rows[i][0]);
-    if (!original) return page_('That event isn’t on the calendar any more.');
-    if (!verdict.title) verdict.title = original.getTitle();
-    const leak = leakCheck_([verdict.title, verdict.description, verdict.location].join('\n'), sensitiveWords_());
-    if (leak) verdict.description = ''; // publish the title and time only, rather than leaking
-    const copy = publish_(CalendarApp.getCalendarById(CALENDAR_ID), original, verdict);
-    sync.getRange(i + 1, 2, 1, 2).setValues([['published', copy.getId()]]);
-    return page_('Published! “' + escape_(verdict.title) + '” is on the playdate page.');
+    if (!original) continue;
+    const text = Object.assign({}, verdict, { title: verdict.title || original.getTitle() });
+    if (leakCheck_([text.title, text.description, text.location].join('\n'), sensitiveWords_())) {
+      text.title = 'Playdate'; text.description = ''; // never leak: publish the time and place only
+    }
+    const copy = publish_(playdates, original, text);
+    sync.getRange(i + 1, 2, 1, 3).setValues([['published', copy.getId(), rows[i][3]]]);
+    sync.getRange(i + 1, 8).setValue(JSON.stringify(text));
+    published++;
   }
-  return page_('Already decided, or the link is old.');
+  if (action === 'skip') return page_('Kept private. It won’t go on the page.');
+  return published ? page_('Published! It’s on the playdate page' + (published > 1 ? ' (' + published + ' dates).' : '.'))
+    : page_('That event isn’t on the calendar any more.');
 }
 
 function findOriginal_(key) {
