@@ -76,7 +76,7 @@ function syncFamilyCalendar() {
         return;
       }
       if (entry) {
-        if (entry.decision === 'published' && entry.copyId) followChanges_(event, playdates.getEventById(entry.copyId));
+        if (entry.decision === 'published' && entry.copyId) followChanges_(event, playdates.getEventById(entry.copyId), sync, entry.row);
         return;
       }
       // A repeating event, or the same title added on several days, is judged once: the others follow.
@@ -209,7 +209,7 @@ function writingRules_() {
     'Write what other parents will see.',
     'title: a clear, correctly spelled name for the outing, with the venue when it helps, e.g. "Open Jump at Sky Zone Mountlake Terrace" or "Story Time at Bothell Library". The calendar title is the family\'s own shorthand: fix typos, expand abbreviations, and capitalize properly. No family names or ticket counts.',
     'description: 1-3 friendly sentences with useful public info (what it is, whether to book tickets, where to meet). Never include names of family members, prices, order or confirmation numbers, phone numbers, emails, or who is coming.',
-    'location: the venue name and city, plus the street address only if you are sure of it. Never a home address.',
+    'location: the venue name and city, plus the street address only if you are sure of it. Never a home address. If neither the event nor the notes say where it is, leave location empty and don\'t mention the missing place in the description (no "check back for details").',
     hints ? 'The family\'s notes on what their shorthand means (trust these):\n' + hints : '',
   ].filter(String).join('\n\n');
 }
@@ -299,11 +299,24 @@ function publish_(playdates, event, verdict) {
   return playdates.createEvent(verdict.title || event.getTitle(), event.getStartTime(), event.getEndTime(), options);
 }
 
-function followChanges_(original, copy) {
+/** Keeps a published copy in step with the original: its time, and its text when you add or change the place. */
+function followChanges_(original, copy, sync, row) {
   if (!copy) return;
   if (copy.getStartTime().getTime() !== original.getStartTime().getTime() || copy.getEndTime().getTime() !== original.getEndTime().getTime()) {
     copy.setTime(original.getStartTime(), original.getEndTime());
   }
+  const place = (original.getLocation() || '').trim();
+  if (!place || !sync) return;
+  let saved = {};
+  try { saved = JSON.parse(sync.getRange(row, 8).getValue() || '{}'); } catch (err) { saved = {}; }
+  if (saved.sourceLocation === place) return;
+  const text = writePublic_(original); // checked for names, contact details and codes
+  if (!text) return;
+  copy.setTitle(text.title);
+  copy.setDescription(text.description || '');
+  copy.setLocation(text.location || '');
+  text.sourceLocation = place;
+  sync.getRange(row, 8).setValue(JSON.stringify(text));
 }
 
 // MARK: - Review queue
@@ -317,6 +330,7 @@ function emailReviews_(reviews) {
       '<b>' + escape_(e.getTitle()) + '</b><br>' + escape_(e.getStartTime().toString()) +
       '<p style="color:#6a6390">Why it’s here: ' + escape_(v.reason || '') + '</p>' +
       (v.title ? '<p>Would publish as: <b>' + escape_(v.title) + '</b><br>' + escape_(v.description || '') + '<br>' + escape_(v.location || '') + '</p>' : '') +
+      (!v.location && !e.getLocation() ? '<p style="color:#c2185b"><b>No place set.</b> Add a location to the calendar event, or a line to PLACE_HINTS, before publishing.</p>' : '') +
       '<a href="' + link('approve') + '" style="background:#5ed27a;color:#fff;padding:10px 18px;border-radius:99px;text-decoration:none;font-weight:bold">Publish</a> ' +
       '<a href="' + link('skip') + '" style="background:#ff5a5f;color:#fff;padding:10px 18px;border-radius:99px;text-decoration:none;font-weight:bold">Keep private</a></div>';
   }).join('');
