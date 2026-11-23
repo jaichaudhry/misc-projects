@@ -9,6 +9,8 @@
   <script>
     // The page moved: send the old GitHub Pages address to the new one.
     if (location.hostname.endsWith('github.io')) location.replace('https://swiftworksolutions.com/playwithpjs/' + location.hash);
+    // Served at /playwithpjs as well as /playwithpjs/: add the slash before the page's own files load.
+    else if (!location.pathname.endsWith('/') && !location.pathname.endsWith('.html')) history.replaceState(null, '', location.pathname + '/' + location.search + location.hash);
   </script>
   <meta property="og:title" content="Come Play with The PJs">
   <meta property="og:description" content="Kid-friendly outings we're going on. Bring your crew!">
