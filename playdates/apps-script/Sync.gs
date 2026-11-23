@@ -40,7 +40,11 @@ const TITLE_PRIVATE = STRONG_PRIVATE.concat([
 ]);
 
 function syncFamilyCalendar() {
-  checkBookings_();
+  try {
+    checkBookings_();
+  } catch (err) {
+    console.error('Checking bookings failed: ' + err.message); // keep syncing regardless
+  }
   const playdates = CalendarApp.getCalendarById(CALENDAR_ID);
   const dryRun = property_('DRY_RUN', 'true') !== 'false';
   const sync = syncSheet_();

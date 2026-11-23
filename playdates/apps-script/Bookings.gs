@@ -65,27 +65,37 @@ function checkBookings_() {
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     if (row[1] !== 'booked') continue;
-    const end = new Date(row[10]);
-    if (end < now) { sheet.getRange(i + 1, 2).setValue('done'); continue; }
-    const booking = familyCalendar.getEventById(row[6]);
-    let why = null;
-    if (!booking) {
-      why = 'you removed the booking';
-    } else {
-      const guest = booking.getGuestByEmail(row[4]);
-      if (!guest) why = 'they’re no longer on the invite';
-      else if (guest.getGuestStatus() === CalendarApp.GuestStatus.NO) why = 'they declined the invite';
+    try {
+      checkBooking_(sheet, i, row, familyCalendar, now);
+    } catch (err) {
+      console.error('Booking row ' + (i + 1) + ': ' + err.message); // one bad row never stops the others
     }
-    if (!why) continue;
-    if (booking) booking.deleteEvent();
-    release_(row);
-    sheet.getRange(i + 1, 2).setValue('released');
-    sheet.getRange(i + 1, 12).setValue(new Date());
-    const text = JSON.parse(row[8] || '{}');
-    notifyOwner_(text.title + ' is open again',
-      '<p><b>' + escape_(row[2]) + '</b> can’t make <b>' + escape_(text.title) + '</b> after all (' + why + '), ' +
-      'so it’s back on the playdate page for another family.</p>');
   }
+}
+
+/** One booking: puts the outing back if the family declined or the booking is gone. */
+function checkBooking_(sheet, i, row, familyCalendar, now) {
+  const end = new Date(row[10]);
+  if (end < now) { sheet.getRange(i + 1, 2).setValue('done'); return; }
+  const booking = familyCalendar.getEventById(row[6]);
+  let why = null;
+  if (!booking) {
+    why = 'you removed the booking';
+  } else {
+    const guest = booking.getGuestByEmail(row[4]);
+    if (!guest) why = 'they’re no longer on the invite';
+    else if (guest.getGuestStatus() === CalendarApp.GuestStatus.NO) why = 'they declined the invite';
+  }
+  if (!why) return;
+  // Google sometimes has already removed it (e.g. after the decline): that's fine.
+  try { if (booking) booking.deleteEvent(); } catch (err) { console.warn('Booking already gone: ' + err.message); }
+  release_(row);
+  sheet.getRange(i + 1, 2).setValue('released');
+  sheet.getRange(i + 1, 12).setValue(new Date());
+  const text = JSON.parse(row[8] || '{}');
+  notifyOwner_(text.title + ' is open again',
+    '<p><b>' + escape_(row[2]) + '</b> can’t make <b>' + escape_(text.title) + '</b> after all (' + why + '), ' +
+    'so it’s back on the playdate page for another family.</p>');
 }
 
 /** Puts a released outing back on the Playdates calendar, and tells the sync it's published again. */
