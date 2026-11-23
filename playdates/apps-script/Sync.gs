@@ -16,6 +16,7 @@
  *   ANTHROPIC_API_KEY  the Claude API key
  *   SENSITIVE_WORDS    comma-separated names and places that must never be published
  *   PLACE_HINTS        optional notes on your shorthand, one per line ("tranmpoline = Sky Zone Mountlake Terrace")
+ *   NOTIFY_EMAILS      optional, comma-separated: who else gets booking emails (Bookings.gs)
  *   DRY_RUN            "true" (the default) only reports decisions; "false" publishes
  */
 const MODEL = 'claude-sonnet-5-5';
@@ -269,30 +270,47 @@ function writePublic_(original) {
 }
 
 /**
- * Run by hand after changing PLACE_HINTS or the writing rules: rewrites the title, description and
- * place of everything already published, once per series, and updates the copies.
+ * Run by hand after adding to PLACE_HINTS: rewrites the published events that have no place yet,
+ * once per outing (series or same title), and updates their copies. Google limits how fast calendar
+ * events can change, so it pauses between changes and carries on past any that fail; run it again
+ * to finish. Set REFRESH_ALL to "true" in Script properties to rewrite everything instead.
  */
 function refreshPublished() {
   const sync = syncSheet_();
   const rows = sync.getDataRange().getValues();
   const playdates = CalendarApp.getCalendarById(CALENDAR_ID);
+  const all = property_('REFRESH_ALL', '') === 'true';
   const written = {};
+  let changed = 0, failed = 0;
   for (let i = 1; i < rows.length; i++) {
     if (rows[i][1] !== 'published' || !rows[i][2]) continue;
-    const series = seriesKey_(rows[i][0]);
-    if (!(series in written)) {
+    let saved = {};
+    try { saved = JSON.parse(rows[i][7] || '{}'); } catch (err) { saved = {}; }
+    if (!all && saved.location) continue;
+    const outing = titleKey_(rows[i][3]);
+    if (!(outing in written)) {
       const original = findOriginal_(rows[i][0]);
-      written[series] = original ? writePublic_(original) : null;
-      if (written[series]) written[series].sourceLocation = (original.getLocation() || '').trim();
+      written[outing] = original ? writePublic_(original) : null;
+      if (written[outing]) written[outing].sourceLocation = (original.getLocation() || '').trim();
     }
-    const text = written[series], copy = playdates.getEventById(rows[i][2]);
-    if (!text || !copy) continue;
-    copy.setTitle(text.title);
-    copy.setDescription(text.description || '');
-    copy.setLocation(text.location || '');
-    sync.getRange(i + 1, 8).setValue(JSON.stringify(text));
+    const text = written[outing];
+    if (!text) continue;
+    try {
+      const copy = playdates.getEventById(rows[i][2]);
+      if (!copy) continue;
+      if (copy.getTitle() !== text.title) copy.setTitle(text.title);
+      if (stripHtml_(copy.getDescription()) !== (text.description || '')) copy.setDescription(text.description || '');
+      if ((copy.getLocation() || '') !== (text.location || '')) copy.setLocation(text.location || '');
+      sync.getRange(i + 1, 8).setValue(JSON.stringify(text));
+      changed++;
+      Utilities.sleep(800);
+    } catch (err) {
+      failed++;
+      console.warn('Row ' + (i + 1) + ': ' + err.message);
+      Utilities.sleep(3000);
+    }
   }
-  Logger.log(JSON.stringify(written, null, 2));
+  Logger.log(changed + ' updated, ' + failed + ' to retry. ' + JSON.stringify(written, null, 2));
 }
 
 function publish_(playdates, event, verdict) {

@@ -142,9 +142,11 @@ function bookingsSheet_() {
   return sheet_('Bookings', BOOKING_HEADERS);
 }
 
+/** Emails you, plus anyone in the NOTIFY_EMAILS script property (comma-separated). */
 function notifyOwner_(subject, html) {
+  const extra = property_('NOTIFY_EMAILS', '').split(',').map(function (e) { return e.trim(); }).filter(String);
   MailApp.sendEmail({
-    to: Session.getEffectiveUser().getEmail(),
+    to: [Session.getEffectiveUser().getEmail()].concat(extra).join(','),
     subject: subject,
     htmlBody: '<div style="font-family:system-ui,sans-serif;font-size:16px;color:#2b2350">' + html + '</div>',
   });
