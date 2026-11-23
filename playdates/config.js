@@ -4,7 +4,7 @@ window.PLAYDATES = {
   // `fallbackEvents` and joins stay on the visitor's device.
   scriptUrl: '',
   // The public Playdates calendar's ID, for the Subscribe buttons.
-  calendarId: '',
+  calendarId: 'd7a58c65618e83092b219fb1e2f456cfaaf95b431ea4eb50a6e5766ff0c6bc56@group.calendar.google.com',
   // Times are shown in this time zone.
   timeZone: 'America/Los_Angeles',
 
