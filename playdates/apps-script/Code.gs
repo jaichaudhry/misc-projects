@@ -6,6 +6,8 @@
  * - POST {type: "join", …}     a family says they're coming (saved to the "Joins" sheet)
  * - POST {type: "alerts", …}   a parent asks for an email when a new playdate is added
  * - emailNewPlaydates()        runs every hour (see setup()), emails subscribers about new events
+ * - syncFamilyCalendar()       runs every 15 minutes, copies joinable outings from the Family calendar
+ *                              (Sync.gs), with a review queue for anything it isn't sure about
  *
  * Only what's in the Playdates calendar is ever published. Parents' email addresses and notes stay
  * in this sheet and are never sent back to the website.
@@ -21,6 +23,7 @@ const DAYS_AHEAD = 120;
 function doGet(e) {
   const action = (e && e.parameter && e.parameter.action) || 'events';
   if (action === 'unsubscribe') return unsubscribe_(e.parameter.token);
+  if (action === 'approve' || action === 'skip') return decideReview_(action, e.parameter.token);
   return json_({ events: upcomingEvents_() });
 }
 
@@ -172,14 +175,16 @@ function emailHtml_(heading, body, token) {
 
 // MARK: - Setup and helpers
 
-/** Run once from the editor: creates the sheets and the hourly email trigger. */
+/** Run once from the editor: creates the sheets and the triggers (emails hourly, sync every 15 minutes). */
 function setup() {
   sheet_('Joins', ['When', 'Event', 'Nickname', 'Kids', 'Note']);
   sheet_('Subscribers', ['Email', 'Token', 'Since']);
+  syncSheet_();
   ScriptApp.getProjectTriggers().forEach(function (trigger) {
-    if (trigger.getHandlerFunction() === 'emailNewPlaydates') ScriptApp.deleteTrigger(trigger);
+    if (['emailNewPlaydates', 'syncFamilyCalendar'].indexOf(trigger.getHandlerFunction()) !== -1) ScriptApp.deleteTrigger(trigger);
   });
   ScriptApp.newTrigger('emailNewPlaydates').timeBased().everyHours(1).create();
+  ScriptApp.newTrigger('syncFamilyCalendar').timeBased().everyMinutes(15).create();
   emailNewPlaydates(); // remembers today's events, so subscribers only hear about new ones
   Logger.log(JSON.stringify(upcomingEvents_(), null, 2));
 }
