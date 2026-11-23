@@ -2,13 +2,13 @@
 window.PLAYDATES = {
   // The Apps Script web app URL (Deploy › New deployment › Web app). Empty: the site shows
   // `fallbackEvents` and joins stay on the visitor's device.
-  scriptUrl: '',
+  scriptUrl: 'https://script.google.com/macros/s/AKfycbxo9Y9KZAnCTZZmw1-3zRwk4m3BmJME2GnLXZfhI1HxE1cJscu0j_dL-XrKkV75xLrF/exec',
   // The public Playdates calendar's ID, for the Subscribe buttons.
   calendarId: 'd7a58c65618e83092b219fb1e2f456cfaaf95b431ea4eb50a6e5766ff0c6bc56@group.calendar.google.com',
   // Times are shown in this time zone.
   timeZone: 'America/Los_Angeles',
 
-  // Shown only until scriptUrl is set (or if the calendar can't be reached).
+  // Shown when scriptUrl isn't set, the calendar can't be reached, or it has nothing coming up yet.
   fallbackEvents: [
     {
       id: 'garden-dlights-2026-12-06',

@@ -287,7 +287,7 @@
       try {
         const response = await fetch(`${config.scriptUrl}?action=events`);
         const body = await response.json();
-        if (Array.isArray(body.events)) return body.events;
+        if (Array.isArray(body.events) && body.events.length) return body.events;
       } catch { /* fall through to the saved list */ }
     }
     const now = Date.now();
