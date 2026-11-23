@@ -218,6 +218,14 @@ button, input, textarea { font: inherit; color: inherit; }
 .band-inner { max-width: 1120px; margin: 0 auto; position: relative; }
 .band h2 { font-size: clamp(40px, 6vw, 68px); color: var(--sun); -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; text-shadow: 5px 5px 0 var(--ink); }
 .band-lede { font-size: 19px; max-width: 46ch; margin: 10px 0 0; }
+.cozy-note {
+  max-width: 52ch; margin: 18px 0 0; padding: 14px 20px; border-radius: 22px;
+  background: var(--white); color: var(--ink); border: var(--outline); box-shadow: 5px 5px 0 var(--ink);
+  font-weight: 800; transform: rotate(-1deg);
+}
+.cozy-note b { background: var(--sun); padding: 0 6px; border-radius: 8px; }
+.one-family { margin: 0; font: 21px var(--hand); color: var(--coral); }
+#join-email { min-height: 56px; padding: 12px 18px; border: var(--outline); border-radius: 18px; background: var(--white); font-weight: 800; font-size: 17px; width: 100%; }
 .note-arrow { position: absolute; right: 0; top: 10px; font: 26px var(--hand); color: var(--sun); transform: rotate(6deg); margin: 0; }
 .note-arrow::after { content: ""; display: block; width: 70px; height: 50px; margin: 4px 0 0 40px; border: 4px solid var(--sun); border-color: var(--sun) transparent transparent transparent; border-radius: 50%; transform: rotate(-40deg); }
 
@@ -258,16 +266,6 @@ button, input, textarea { font: inherit; color: inherit; }
 .desc { margin: 0; color: var(--muted); font-weight: 700; }
 .desc.clamped { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .more { align-self: flex-start; background: none; border: 0; padding: 0; font: 22px var(--hand); color: var(--coral); cursor: pointer; }
-.going { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 40px; }
-.faces { display: flex; }
-.face {
-  width: 38px; height: 38px; border-radius: 50%; border: 3px solid var(--ink); margin-left: -10px; display: grid; place-items: center;
-  font: 400 16px var(--display); color: var(--white); background: var(--c); animation: faceIn .5s var(--bounce) both;
-  -webkit-text-stroke: .6px var(--ink);
-}
-.face:first-child { margin-left: 0; }
-@keyframes faceIn { from { transform: scale(0) rotate(-90deg); } }
-.going-text { font-weight: 800; color: var(--muted); }
 .card-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: auto; padding-top: 6px; }
 .card-actions .big-button { font-size: 20px; min-height: 56px; padding: 0 22px; }
 .pill {
@@ -278,9 +276,6 @@ button, input, textarea { font: inherit; color: inherit; }
 }
 .pill:hover { transform: translateY(-3px) rotate(-2deg); box-shadow: 6px 7px 0 var(--ink); }
 .pill:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
-.cal-menu { position: relative; }
-.cal-options { position: absolute; left: 0; bottom: calc(100% + 12px); z-index: 5; display: grid; gap: 10px; padding: 12px; min-width: 220px; background: var(--paper); border: var(--outline); border-radius: 22px; box-shadow: var(--pop); animation: popIn .35s var(--bounce); }
-@keyframes popIn { from { transform: scale(.5) translateY(20px); opacity: 0; } }
 
 /* ---------- Subscribe ---------- */
 .subscribe { padding: 110px var(--gutter) 90px; display: grid; place-items: center; }
@@ -353,7 +348,6 @@ textarea { resize: vertical; }
 .join .big-button { margin-top: 10px; }
 #join-done { text-align: center; justify-items: center; }
 #join-done h2 { font-size: 42px; color: var(--coral); -webkit-text-stroke: 1.5px var(--ink); paint-order: stroke fill; }
-.add-cal { display: grid; gap: 12px; width: 100%; margin-top: 8px; }
 .party { position: relative; width: 120px; height: 90px; }
 .party span { position: absolute; bottom: 0; width: 44px; height: 56px; border: var(--outline); border-radius: 50% 50% 46% 46%; animation: hop 1.2s var(--bounce) infinite; }
 .party span:nth-child(1) { left: 0; background: var(--coral); }

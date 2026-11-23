@@ -40,6 +40,7 @@ const TITLE_PRIVATE = STRONG_PRIVATE.concat([
 ]);
 
 function syncFamilyCalendar() {
+  checkBookings_();
   const playdates = CalendarApp.getCalendarById(CALENDAR_ID);
   const dryRun = property_('DRY_RUN', 'true') !== 'false';
   const sync = syncSheet_();
@@ -60,6 +61,7 @@ function syncFamilyCalendar() {
     const calendar = CalendarApp.getCalendarById(calendarId);
     if (!calendar) throw new Error('Can’t open calendar ' + calendarId);
     calendar.getEvents(now, until).forEach(function (event) {
+      if (event.getTag('playdates')) return; // a booking this script made, not one of yours
       const key = eventKey_(event);
       seen[key] = true;
       const entry = known[key];

@@ -268,40 +268,8 @@
     return art.party;
   }
 
-  // ---------- Calendar links ----------
-  const stamp = (date) => new Date(date).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-  const dayStamp = (date) => fmt({ year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(date))
-    .filter((p) => p.type !== 'literal').reduce((o, p) => ({ ...o, [p.type]: p.value }), {});
-  const ymd = (date) => { const p = dayStamp(date); return `${p.year}${p.month}${p.day}`; };
-  function googleLink(event) {
-    const dates = event.allDay ? `${ymd(event.start)}/${ymd(event.end)}` : `${stamp(event.start)}/${stamp(event.end)}`;
-    const params = new URLSearchParams({ action: 'TEMPLATE', text: `Playdate: ${event.title}`, dates, details: `${event.description}\n\n${location.href.split('#')[0]}`, location: event.location || '' });
-    return `https://calendar.google.com/calendar/render?${params}`;
-  }
-  function icsFile(event) {
-    const line = (s) => String(s || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/[,;]/g, (m) => `\\${m}`);
-    const timing = event.allDay ? [`DTSTART;VALUE=DATE:${ymd(event.start)}`, `DTEND;VALUE=DATE:${ymd(event.end)}`] : [`DTSTART:${stamp(event.start)}`, `DTEND:${stamp(event.end)}`];
-    const text = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Come Play//Playdates//EN', 'BEGIN:VEVENT', `UID:${event.id}@come-play`, `DTSTAMP:${stamp(new Date())}`,
-      ...timing, `SUMMARY:${line(`Playdate: ${event.title}`)}`, `LOCATION:${line(event.location)}`, `DESCRIPTION:${line(event.description)}`,
-      'BEGIN:VALARM', 'TRIGGER:-PT2H', 'ACTION:DISPLAY', `DESCRIPTION:${line(`Playdate: ${event.title}`)}`, 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
-    const url = URL.createObjectURL(new Blob([text], { type: 'text/calendar' }));
-    const a = document.createElement('a');
-    a.href = url; a.download = `playdate-${event.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.ics`;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-  }
-  function calendarButtons(event) {
-    const wrap = document.createElement('div');
-    wrap.className = 'add-cal';
-    wrap.innerHTML = `<a class="pill" href="${esc(googleLink(event))}" target="_blank" rel="noopener" data-sound="boing">Add to Google Calendar</a>
-      <button class="pill" type="button" data-sound="boing">Add to Apple or Outlook</button>`;
-    wrap.querySelector('button').addEventListener('click', () => { icsFile(event); toast('Calendar file downloaded. Open it to add the playdate.'); });
-    return wrap;
-  }
-
   // ---------- Events ----------
-  let events = [];
-  const myJoins = store.get('playdates.joined', {});
+  let events = [], allEvents = [];
 
   async function loadEvents() {
     if (config.scriptUrl) {
@@ -312,21 +280,8 @@
       } catch { /* fall through to the saved list */ }
     }
     const now = Date.now();
-    return config.fallbackEvents.filter((e) => new Date(e.end).getTime() > now)
-      .map((e) => ({ ...e, going: [...(e.going || []), ...(myJoins[e.id] ? [myJoins[e.id]] : [])] }));
-  }
-
-  const facesFor = (going) => going.slice(0, 6).map((g, i) => {
-    let hash = 0; for (const ch of g.nickname) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-    const initial = (g.nickname.replace(/^the\s+/i, '').trim()[0] || '?').toUpperCase();
-    return `<span class="face" style="--c:${colors[hash % colors.length]};animation-delay:${i * .08}s" title="${esc(g.nickname)}">${esc(initial)}</span>`;
-  }).join('');
-  function goingText(going) {
-    if (!going.length) return 'Be the first crew to join!';
-    const kids = going.reduce((n, g) => n + (Number(g.kids) || 0), 0);
-    const names = going.slice(0, 2).map((g) => g.nickname).join(' and ');
-    const others = going.length > 2 ? ` and ${going.length - 2} more` : '';
-    return `${names}${others} ${going.length === 1 ? 'is' : 'are'} coming${kids ? ` · ${kids} kid${kids === 1 ? '' : 's'}` : ''}`;
+    const booked = store.get('playdates.booked', []);
+    return config.fallbackEvents.filter((e) => new Date(e.end).getTime() > now && !booked.includes(e.id));
   }
 
   const icons = {
@@ -361,10 +316,9 @@
             ${event.location ? `<li><span class="ico">${icons.pin}</span><a href="${esc(maps)}" target="_blank" rel="noopener">${esc(event.location)}</a></li>` : ''}
           </ul>
           ${event.description ? `<p class="desc clamped">${esc(event.description)}</p><button class="more" type="button" data-sound="blip">read more</button>` : ''}
-          <div class="going"><span class="faces">${facesFor(event.going || [])}</span><span class="going-text">${esc(goingText(event.going || []))}</span></div>
+          <p class="one-family">${event.dates ? 'One family per day. Pick yours!' : 'Just one family for this one. Say yes first and it’s yours!'}</p>
           <div class="card-actions">
-            <button class="big-button go join-btn" type="button"><span>${(event.dates || [event]).some((d) => myJoins[d.id]) ? 'Going!' : "We're in!"}</span></button>
-            <div class="cal-menu"><button class="pill cal-btn" type="button" aria-expanded="false">Add to calendar</button></div>
+            <button class="big-button go join-btn" type="button"><span>We're in!</span></button>
           </div>
         </div>`;
       const desc = card.querySelector('.desc'), more = card.querySelector('.more');
@@ -375,28 +329,9 @@
       card.addEventListener('mouseenter', () => { if (matchMedia('(hover: hover)').matches) sound.play('blip'); });
       card.querySelector('.card-art').addEventListener('click', () => sound.play(look.sound));
       card.querySelector('.join-btn').addEventListener('click', () => openJoin(event));
-      const calButton = card.querySelector('.cal-btn'), menu = card.querySelector('.cal-menu');
-      calButton.addEventListener('click', () => {
-        const existing = menu.querySelector('.cal-options');
-        document.querySelectorAll('.cal-options').forEach((m) => { m.remove(); });
-        document.querySelectorAll('.cal-btn').forEach((b) => b.setAttribute('aria-expanded', 'false'));
-        if (existing) { sound.play('down'); return; }
-        sound.play('up');
-        const options = calendarButtons(event);
-        options.className = 'cal-options';
-        menu.appendChild(options);
-        calButton.setAttribute('aria-expanded', 'true');
-      });
       cards.appendChild(card);
     });
   }
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('.cal-menu')) {
-      document.querySelectorAll('.cal-options').forEach((m) => m.remove());
-      document.querySelectorAll('.cal-btn').forEach((b) => b.setAttribute('aria-expanded', 'false'));
-    }
-  });
-
   // ---------- Join dialog ----------
   const dialog = $('#join');
   let current = null, kids = 1;
@@ -431,6 +366,7 @@
     $('#join-ask').hidden = false; $('#join-done').hidden = true;
     $('#join-msg').textContent = ''; $('#join-msg').className = 'form-msg';
     $('#join-nickname').value = store.get('playdates.nickname', '');
+    $('#join-email').value = store.get('playdates.email', '');
     $('#join-note').value = '';
     setKids(store.get('playdates.kids', 1));
     if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', '');
@@ -443,7 +379,15 @@
   async function post(body) {
     const response = await fetch(config.scriptUrl, { method: 'POST', body: JSON.stringify(body) }); // text/plain: no CORS preflight
     const result = await response.json();
-    if (!result.ok) throw new Error(result.error || 'Something went wrong.');
+    if (!result.ok) throw Object.assign(new Error(result.error || 'Something went wrong.'), { taken: !!result.taken });
+  }
+
+  /** Takes a booked (or just-taken) date off the page. */
+  function removeFromPage(event) {
+    allEvents = allEvents.filter((e) => e.id !== event.id);
+    allEvents.forEach((e) => { delete e.dates; });
+    events = groupSeries(allEvents);
+    render();
   }
 
   $('#join-form').addEventListener('submit', async (e) => {
@@ -454,26 +398,31 @@
       msg.textContent = 'Add a family nickname so we know who’s coming!'; msg.className = 'form-msg bad';
       sound.play('down'); $('#join-nickname').focus(); return;
     }
+    const email = $('#join-email').value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      msg.textContent = 'Add your email so we can send you the calendar invite!'; msg.className = 'form-msg bad';
+      sound.play('down'); $('#join-email').focus(); return;
+    }
     const submit = $('#join-submit');
     submit.disabled = true; submit.querySelector('span').textContent = 'Sending…';
-    const entry = { nickname, kids };
     try {
       if (config.scriptUrl) {
-        await post({ type: 'join', eventId: current.id, nickname, kids, note: $('#join-note').value.trim(), website: e.target.website.value });
+        await post({ type: 'join', eventId: current.id, nickname, email, kids, note: $('#join-note').value.trim(), website: e.target.website.value });
+      } else {
+        store.set('playdates.booked', [...store.get('playdates.booked', []), current.id]);
       }
-      myJoins[current.id] = entry;
-      store.set('playdates.joined', myJoins);
       store.set('playdates.nickname', nickname);
+      store.set('playdates.email', email);
       store.set('playdates.kids', kids);
-      current.going = [...(current.going || []).filter((g) => g.nickname !== nickname), entry];
+      $('#join-done-email').textContent = email;
       $('#join-ask').hidden = true; $('#join-done').hidden = false;
-      $('#join-cal').replaceChildren(...calendarButtons(current).children);
       sound.play('chime');
       confetti();
-      render();
+      removeFromPage(current);
     } catch (error) {
       msg.textContent = error.message || 'Couldn’t send that. Please try again.'; msg.className = 'form-msg bad';
       sound.play('down');
+      if (error.taken) removeFromPage(current);
     } finally {
       submit.disabled = false; submit.querySelector('span').textContent = "We're in!";
     }
@@ -521,7 +470,8 @@
   });
 
   loadEvents().then((list) => {
-    events = groupSeries(list);
+    allEvents = list;
+    events = groupSeries(allEvents);
     render();
   });
 })();

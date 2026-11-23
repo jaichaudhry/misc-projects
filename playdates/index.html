@@ -76,7 +76,8 @@
     <section class="band events-band" id="playdates" aria-labelledby="playdates-title">
       <div class="band-inner">
         <h2 id="playdates-title">Coming up</h2>
-        <p class="band-lede">Tap <b>We're in!</b> so we know you're coming, then pop it in your calendar.</p>
+        <p class="band-lede">Tap <b>We're in!</b> and we'll send you a calendar invite.</p>
+        <p class="cozy-note">We keep playdates small and cozy: <b>one family per outing</b>, so the kids get real time to play together. When a family says yes, it hops off the list. If plans change, it pops right back!</p>
         <p class="note-arrow" aria-hidden="true">new adventures land here!</p>
         <div class="cards" id="cards" aria-live="polite">
           <p class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span> Finding playdates…</p>
@@ -121,13 +122,17 @@
       <div class="join-step" id="join-ask">
         <p class="join-kicker">Yay, a playdate!</p>
         <h2 id="join-title">Join <span id="join-event">this playdate</span></h2>
+        <p class="fine">This one is just for one family, so once you say yes, it's all yours.</p>
         <div class="date-pick" id="join-dates" hidden>
           <span class="label">Which day?</span>
           <div class="chips" id="join-chips"></div>
         </div>
         <label for="join-nickname">Your family nickname</label>
         <input id="join-nickname" name="nickname" maxlength="40" placeholder="The Lee Crew" autocomplete="off" required>
-        <p class="fine">Everyone on this page sees it, so a nickname is perfect. No last names needed.</p>
+        <p class="fine">Just what we should call you, like "The Lee Crew". No last names needed.</p>
+        <label for="join-email">Your email</label>
+        <input id="join-email" name="email" type="email" inputmode="email" maxlength="120" placeholder="you@example.com" autocomplete="email" required>
+        <p class="fine">We'll send the calendar invite here. Only we see it.</p>
         <span class="label" id="kids-label">How many kids?</span>
         <div class="stepper" role="group" aria-labelledby="kids-label">
           <button type="button" class="step" id="kids-minus" aria-label="One fewer kid">−</button>
@@ -142,9 +147,9 @@
       </div>
       <div class="join-step" id="join-done" hidden>
         <div class="party" aria-hidden="true"><span></span><span></span><span></span></div>
-        <h2>See you there!</h2>
-        <p>Pop it in your calendar so you don't forget.</p>
-        <div class="add-cal" id="join-cal"></div>
+        <h2>It's a playdate!</h2>
+        <p>It's all yours! A calendar invite is on its way to <b id="join-done-email"></b>.</p>
+        <p class="fine">If plans change, no worries at all: just decline the invite and we'll put the outing back for another family.</p>
       </div>
     </form>
   </dialog>

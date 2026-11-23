@@ -1,13 +1,18 @@
 # Come Play!
 
-A kid-style page where other parents can see our upcoming playdate outings, say they're coming,
-add them to their own calendar, subscribe to the whole calendar, or get an email when we add one.
+A kid-style page where other parents can see our upcoming playdate outings and book one, subscribe to
+the whole calendar, or get an email when we add one. Each outing is for one family: when a family
+says yes, it comes off the page and they get a calendar invite; if they decline it, it comes back.
 
 - **Site:** `index.html`, `styles.css`, `app.js`, settings in `config.js`. Plain HTML, CSS and
   JavaScript, served by GitHub Pages. All sounds are synthesized in the browser.
-- **Backend:** `apps-script/Code.gs` and `Sync.gs`, a Google Apps Script web app bound to a Google
-  Sheet. It reads the public **Playdates** Google Calendar, saves joins and email sign-ups to the
-  sheet, and emails subscribers every hour when new events appear.
+- **Backend:** `apps-script/Code.gs`, `Sync.gs` and `Bookings.gs`, a Google Apps Script web app bound
+  to a Google Sheet. It reads the public **Playdates** Google Calendar, books outings, saves email
+  sign-ups to the sheet, and emails subscribers every hour when new events appear.
+- **Bookings:** when a family says yes, the outing is removed from the Playdates calendar, and a
+  "Playdate: … with <family>" event goes on the Family calendar with them invited. You get an email.
+  Every 15 minutes it checks the bookings: if the family declines, is removed from the invite, or you
+  delete that event, the outing goes back on the page and you get an email. Logged in the *Bookings* tab.
 - **Automatic copying:** every 15 minutes `Sync.gs` looks at new events on the Family calendar and
   copies the ones other families could join onto the Playdates calendar, with a public title and
   description that leave out names, prices and booking details:
@@ -21,8 +26,7 @@ add them to their own calendar, subscribe to the whole calendar, or get an email
   Every decision is logged in the sheet's *Sync* tab. Published copies follow the original's time,
   and come off the page if the original is deleted.
 
-Parents' notes and email addresses stay in the sheet; the site shows only each family's nickname
-and number of kids.
+Parents' notes and email addresses stay in the sheet and are never shown on the site.
 
 ## One-time setup (about 10 minutes)
 
@@ -32,8 +36,9 @@ and number of kids.
    - *Integrate calendar* › copy the **Calendar ID**.
 2. **Create the backend.**
    - Make a new Google Sheet called "Playdates", then *Extensions › Apps Script*.
-   - Replace the code with `apps-script/Code.gs`, add a second script file named `Sync` with
-     `apps-script/Sync.gs`, and paste the Playdates Calendar ID into `CALENDAR_ID`.
+   - Replace the code with `apps-script/Code.gs`, add script files named `Sync` and `Bookings` with
+     `apps-script/Sync.gs` and `apps-script/Bookings.gs`, and paste the Playdates Calendar ID into
+     `CALENDAR_ID`.
    - *Project Settings › Script properties*, add:
      - `WATCHED_CALENDARS`: the Family calendar's ID (more than one, comma-separated, is fine).
      - `ANTHROPIC_API_KEY`: a Claude API key.

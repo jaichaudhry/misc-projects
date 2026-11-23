@@ -3,7 +3,7 @@
  *
  * - GET  ?action=events        upcoming events from the public Playdates calendar, with who's coming
  * - GET  ?action=unsubscribe&token=…   stops the new-playdate emails for one address
- * - POST {type: "join", …}     a family says they're coming (saved to the "Joins" sheet)
+ * - POST {type: "join", …}     a family books an outing: one family per outing (Bookings.gs)
  * - POST {type: "alerts", …}   a parent asks for an email when a new playdate is added
  * - emailNewPlaydates()        runs every hour (see setup()), emails subscribers about new events
  * - syncFamilyCalendar()       runs every 15 minutes, copies joinable outings from the Family calendar
@@ -38,7 +38,7 @@ function doPost(e) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    if (body.type === 'join') return join_(body);
+    if (body.type === 'join') return json_(book_(body));
     if (body.type === 'alerts') return subscribe_(body);
     return json_({ ok: false, error: 'Unknown request.' });
   } finally {
@@ -53,7 +53,6 @@ function upcomingEvents_() {
   if (!calendar) throw new Error('Set CALENDAR_ID to the Playdates calendar’s ID.');
   const now = new Date();
   const until = new Date(now.getTime() + DAYS_AHEAD * 24 * 3600 * 1000);
-  const joins = joinsByEvent_();
   return calendar.getEvents(now, until).map(function (event) {
     const id = eventKey_(event);
     return {
@@ -64,12 +63,11 @@ function upcomingEvents_() {
       allDay: event.isAllDayEvent(),
       location: event.getLocation(),
       description: stripHtml_(event.getDescription()),
-      going: joins[id] || [],
     };
   });
 }
 
-/** One key per occurrence, so each week of a repeating event has its own guest list. */
+/** One key per occurrence, so each week of a repeating event can be booked on its own. */
 function eventKey_(event) {
   return event.getId().split('@')[0] + '_' + event.getStartTime().getTime();
 }
@@ -82,30 +80,6 @@ function stripHtml_(text) {
     .replace(/&amp;/g, '&')
     .trim()
     .slice(0, 600);
-}
-
-// MARK: - Joins
-
-function join_(body) {
-  const eventId = clean_(body.eventId, 120);
-  const nickname = clean_(body.nickname, 40);
-  const kids = Math.max(0, Math.min(10, parseInt(body.kids, 10) || 0));
-  const note = clean_(body.note, 300);
-  if (!eventId || !nickname) return json_({ ok: false, error: 'Please add a family nickname.' });
-  sheet_('Joins', ['When', 'Event', 'Nickname', 'Kids', 'Note'])
-    .appendRow([new Date(), eventId, nickname, kids, note]);
-  return json_({ ok: true });
-}
-
-/** Only nickname and kid count are published; notes stay in the sheet. */
-function joinsByEvent_() {
-  const rows = sheet_('Joins', ['When', 'Event', 'Nickname', 'Kids', 'Note']).getDataRange().getValues().slice(1);
-  const byEvent = {};
-  rows.forEach(function (row) {
-    const list = byEvent[row[1]] || (byEvent[row[1]] = []);
-    list.push({ nickname: String(row[2]), kids: Number(row[3]) || 0 });
-  });
-  return byEvent;
 }
 
 // MARK: - Email alerts
@@ -177,7 +151,7 @@ function emailHtml_(heading, body, token) {
 
 /** Run once from the editor: creates the sheets and the triggers (emails hourly, sync every 15 minutes). */
 function setup() {
-  sheet_('Joins', ['When', 'Event', 'Nickname', 'Kids', 'Note']);
+  bookingsSheet_();
   sheet_('Subscribers', ['Email', 'Token', 'Since']);
   syncSheet_();
   ScriptApp.getProjectTriggers().forEach(function (trigger) {
