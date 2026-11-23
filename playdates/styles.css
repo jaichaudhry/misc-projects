@@ -121,7 +121,7 @@ button, input, textarea { font: inherit; color: inherit; }
 .c3 { top: 12%; transform: scale(.5); animation-duration: 95s; animation-delay: -70s; opacity: .8; }
 @keyframes drift { from { left: -240px; } to { left: 110%; } }
 
-.balloons { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.balloons { position: absolute; inset: 0; z-index: 2; pointer-events: none; } /* in front, so taps reach them on phones; only the balloons themselves catch taps */
 .balloon {
   position: absolute; bottom: -160px; width: 64px; height: 80px; pointer-events: auto; cursor: pointer;
   border: 0; padding: 0; background: none;
